@@ -52,13 +52,13 @@ GTM SS must first be deployed before it can be used. This can easily achieved by
 
 ## Snowplow Client
 
-To receive events in your GTM SS container, the Snowplow Client must be installed. This works for both events direct from the tracker, or enriched events from the pipeline.
+To receive events in your GTM SS container, the [Snowplow Client](./snowplow-client-for-gtm-ss/index.md) must be installed. This works for both events direct from the tracker, or enriched events from the pipeline.
 
 The Snowplow Client populates the common event data so many GTM SS tags will just work, however it also populates a set of additional properties to ensure the rich Snowplow event data is available to Tags which wish to take advantage of this, such as the Snowplow Authored Tags.
 
 ## Snowplow Tag
 
-If using GTM SS as a Server Side Tag Manager for Snowplow JavaScript Tracker events, you will want to ensure you forward these events to your Snowplow Collector. The Snowplow Tag will automatically forward any events the Snowplow Client receives once it has been configured with your Collector URL. It can also construct Snowplow events from other GTM SS Clients such as GAv4.
+If using GTM SS as a Server Side Tag Manager for Snowplow JavaScript Tracker events, you will want to ensure you forward these events to your Snowplow Collector. The [Snowplow Tag](./snowplow-tag-for-gtm-ss/index.md) will automatically forward any events the Snowplow Client receives once it has been configured with your Collector URL. It can also construct Snowplow events from other GTM SS Clients such as GAv4.
 
 ## Snowplow Authored Tags
 
