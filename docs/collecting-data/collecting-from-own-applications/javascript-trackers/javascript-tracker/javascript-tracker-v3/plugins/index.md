@@ -41,3 +41,4 @@ For other combinations of plugins not covered by `sp.js` or `sp.lite.js`, try [b
 | Snowplow Ecommerce | ❌ | ❌ |
 | Timezone | ✅ | ❌ |
 | YouTube Tracking | ❌ | ❌ |
+| Vimeo Tracking | ❌ | ❌ |
