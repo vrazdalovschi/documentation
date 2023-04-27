@@ -3,15 +3,8 @@ import CodeBlock from '@theme/CodeBlock';
 import TOCInline from '@theme/TOCInline';
 ```
 
-```mermaid
-timeline
-    title Sample media tracking scenario
-    [0s] Video player appeared :  [0s] Call start media tracking : [0s] Track ready event : [30s] Ping event
-    [40s] User started playing the video : [40s] Track play event : [60s] Ping event
-    [65s] Ad started playing : [65s] Track ad break start : [65s] Track ad start : [70s] Track ad skip : [70s] Track ad break end
-    [90s] Video resumed playing after ad : [90s] Ping event : [100s] Track end event
-    [120s] Video player disappeared : [120s] Call end media tracking
-```
+<!-- Note: Docusaurus mermaid theme does not yet support renderAsync required by the timeline diagram, so using a pre-built SVG -->
+![](./timeline_diagram.svg)
 
 The Snowplow media tracking APIs enable you to track events from media playback on the Web as well as mobile apps.
 The trackers provide a set of tracking APIs that enable you to track changes in the media playback (e.g., play, pause, seek events), playback position (ping and percentage progress events), or ad playback events (e.g., ad breaks, ad progress, ad clicks).
