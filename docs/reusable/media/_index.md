@@ -33,14 +33,9 @@ Update the link to the example when it is deployed on Github Pages.
 ### Media player events
 
 Each media player event is a self-describing event with a unique schema.
-The schemas contain a single `label` property:
-
-Request Key | Required | Type/Format | Description
--- | -- | -- | --
-label | N | string | A custom identifier for the media player
 
 The schema URIs have the format:
-`iglu:com.snowplowanalytics.snowplow/media_player_event_{EVENT_TYPE}/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/{EVENT_TYPE}/jsonschema/1-0-0`.
 
 You can see the schemas listed under the event tracking methods below.
 
@@ -52,26 +47,33 @@ It contains the current playback position (`currentTime`) as well as the paused 
 <details>
     <summary>Media player entity properties</summary>
 
+The schemas contain a single `label` property:
+
 | Request Key | Required | Type/Format | Description |
 | --- | --- | --- | --- |
 | currentTime | Y | number | The current playback time |
 | duration | N | number | A double-precision floating-point value indicating the duration of the media in seconds |
 | ended | Y | boolean | If playback of the media has ended |
-| isLive | Y | boolean | If the media is live |
-| loop | Y | boolean | If the video should restart after ending |
-| muted | Y | boolean | If the media element is muted |
+| fullscreen | N | boolean | Whether the video element is fullscreen |
+| isLive | N | boolean | If the media is live |
+| label | N | string | Human readable name given to tracked media content |
+| loop | N | boolean | If the video should restart after ending |
+| mediaType | N | enum: `audio` or `video` | Type of media content |
+| muted | N | boolean | If the media element is muted |
 | paused | Y | boolean | If the media element is paused |
-| percentProgress | N | integer | The percent of the way through the media |
-| playbackRate | Y | number | Playback rate (1 is normal) |
-| volume | Y | integer | Volume percent |
+| pictureInPicture | N | boolean | Whether the video element is showing picture-in-picture |
+| playbackRate | N | number | Playback rate (1 is normal) |
+| playerType | N | string | Type of the media player (e.g., com.youtube-youtube, com.vimeo-vimeo, org.whatwg-media_element) |
+| quality | N | string | Quality level of the playback (e.g., 1080p) |
+| volume | N | integer | Volume percent |
 </details>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/player/jsonschema/1-0-0`.
 
-### Media player session entity
+### Media session entity
 
-The media player session entity is used to identify the playback using the `mediaSessionId`.
+The media session entity is used to identify the playback using the `mediaSessionId`.
 It also contains statistics about the media playback computed on the tracker (e.g., `timePlayed`, `timeBuffering`, `adsClicked`).
 
 <details>
@@ -98,14 +100,14 @@ It also contains statistics about the media playback computed on the tracker (e.
 It is an optional entity that is enabled by default.
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_session/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/session/jsonschema/1-0-0`.
 
-### Media player ad and ad break entities
+### Media ad and ad break entities
 
 These entities give information about the currently playing ad and ad break.
 
 <details>
-    <summary>Media player ad break entity properties</summary>
+    <summary>Media ad break entity properties</summary>
 
 | Request Key | Required | Type/Format | Description |
 | --- | --- | --- | --- |
@@ -118,7 +120,7 @@ companion – accompany the video but placed outside the player |
 </details>
 
 *Schema for the ad break entity:*
-`iglu:com.snowplowanalytics.snowplow/media_player_ad_break/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_break/jsonschema/1-0-0`.
 
 <details>
     <summary>Media player ad entity properties</summary>
@@ -129,21 +131,21 @@ companion – accompany the video but placed outside the player |
 | adId | Y | string | Unique identifier for the ad. |
 | creativeId | N | string | The ID of the ad creative |
 | podPosition | N | integer | The number position of the ad within the ad break, starting with 1. |
-| percentProgress | Y | number | The percent of the way through the ad |
 | duration | Y | number | Length of the video ad in seconds |
 | skippable | N | boolean | Indicating whether skip controls are made available to the end user |
 </details>
 
 *Schema for the ad entity:*
-`iglu:com.snowplowanalytics.snowplow/media_player_ad/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad/jsonschema/1-0-0`.
 
 ## Starting and ending media tracking
 
 The tracker keeps track of ongoing media tracking instances in order to manage entities that are tracked along with the media events.
 
-Media tracking instances are identified by an ID (that is tracked in the media player session entity as `mediaSessionId`).
+Media tracking instances are identified by a unique ID (that is tracked in the media session entity as `mediaSessionId`).
 You provide the identifier in the `startMediaTracking` call that initializes the media tracking instance.
 All subsequent media track calls will be processed within this media tracking if given the same ID.
+Make sure that each media player and content tracked have a different ID.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
 {`const id = 'XXXXX'; // randomly generated ID
@@ -160,7 +162,7 @@ startMediaTracking({ id });
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
 {`let id = "XXXXX"
 let tracker = Snowplow.defaultTracker()
-let mediaTracking = tracker.media.startMediaTracking(id: id, label: nil)
+let mediaTracking = tracker.media.startMediaTracking(id: id)
 `}
 </CodeBlock>)}</>
 
@@ -180,31 +182,16 @@ Use the `endMediaTracking` call to end media tracking. This will clear the local
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
 {`import { endMediaTracking } from "@snowplow/browser-plugin-media";
-endMediaTracking({ id });
-`}
+endMediaTracking({ id });`}
+</CodeBlock>)}</>
+
+<>{(props.tracker == 'ios') && (<CodeBlock language="swift">
+{`tracker.media.endMediaTracking(id: id)`}
 </CodeBlock>)}</>
 
 ### Configuration
 
 You can provide additional configuration to the `startMediaTracking` call to configure the tracking or give initial information about the media played.
-
-#### Label
-
-The `label` property is a custom optional identifier that is tracked in the body of each event.
-
-<>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('startMediaTracking', { id, label: 'Video on homepage' });`}
-</CodeBlock>)}</>
-
-<>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`startMediaTracking({ id, label: 'Video on homepage' });
-`}
-</CodeBlock>)}</>
-
-<>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`let mediaTracking = tracker.media.startMediaTracking(id: id, label: "Video on homepage")
-`}
-</CodeBlock>)}</>
 
 #### Media player properties
 
@@ -213,50 +200,64 @@ The `media` property lets you provide information about the media playback that 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
 {`window.snowplow('startMediaTracking', {
     id,
-    media: {
+    player: {
         currentTime: 0, // The current playback time
         duration: 150, // A double-precision floating-point value indicating the duration of the media in seconds
-        ended: false // If playback of the media has ended
+        ended: false, // If playback of the media has ended
         isLive: false, // If the media is live
+        label: 'Sample video', // A human-readable title for the media
         loop: false, // If the video should restart after ending
+        mediaType: 'video', // The type of media
         muted: false, // If the media element is muted
         paused: false, // If the media element is paused
+        pictureInPicture: false, // If the media is in picture-in-picture mode
+        playerType: 'html5', // The type of player
         playbackRate: 1.0, // Playback rate (1 is normal)
+        quality: '1080p', // The quality level of the playback
         volume: 100, // Volume level
     }
 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`startMediaTracking({
+{`import { MediaType }from "@snowplow/browser-plugin-media";
+startMediaTracking({
     id,
-    media: {
+    player: {
         currentTime: 0, // The current playback time
         duration: 150, // A double-precision floating-point value indicating the duration of the media in seconds
-        ended: false // If playback of the media has ended
+        ended: false, // If playback of the media has ended
         isLive: false, // If the media is live
+        label: 'Sample video', // A human-readable title for the media
         loop: false, // If the video should restart after ending
+        mediaType: MediaType.Video, // The type of media
         muted: false, // If the media element is muted
-        paused: true, // If the media element is paused
+        paused: false, // If the media element is paused
+        pictureInPicture: false, // If the media is in picture-in-picture mode
+        playerType: 'html5', // The type of player
         playbackRate: 1.0, // Playback rate (1 is normal)
+        quality: '1080p', // The quality level of the playback
         volume: 100, // Volume level
     }
-});
-`}
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`let media = MediaUpdate()
+{`let player = MediaPlayer()
     .currentTime(0) // The current playback time
     .duration(150.0) // A double-precision floating-point value indicating the duration of the media in seconds
     .ended(false) // If playback of the media has ended
     .isLive(false) // If the media is live
+    .label("Sample video") // A human-readable title for the media
     .loop(false) // If the video should restart after ending
+    .mediaType(.video) // Type of media content
     .muted(false) // If the media element is muted
     .paused(true) // If the media element is paused
+    .pictureInPicture(false) // If the media is in picture-in-picture mode
     .playbackRate(1.0) // Playback rate (1 is normal)
+    .quality("1080p") // The quality level of the playback
     .volume(100) // Volume level
-let mediaTracking = tracker.media.startMediaTracking(id: id, label: nil, media: media)
+let mediaTracking = tracker.media.startMediaTracking(id: id, player: player)
 `}
 </CodeBlock>)}</>
 
@@ -335,7 +336,7 @@ let mediaTracking = tracker.media.startMediaTracking(configuration: configuratio
 </CodeBlock>)}</>
 
 Media ping events have the following schema:
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ping/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ping_event/jsonschema/1-0-0`.
 
 #### Media player session
 
@@ -379,7 +380,7 @@ let mediaTracking = tracker.media.startMediaTracking(configuration: configuratio
 </CodeBlock>)}</>
 
 Percentage progress events have the following schema:
-`iglu:com.snowplowanalytics.snowplow/media_player_event_percent_progress/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/percent_progress_event/jsonschema/1-0-0`.
 
 #### Filter captured events
 
@@ -397,12 +398,12 @@ startMediaTracking({ id, captureEvents: [MediaPlayerEventType.Play] });
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
 {`let configuration = MediaTrackingConfiguration(id: id)
-    .captureEvents([.play])
+    .captureEvents([MediaPlayEvent.self])
 let mediaTracking = tracker.media.startMediaTracking(configuration: configuration)
 `}
 </CodeBlock>)}</>
 
-#### Add context entities
+#### Add context entities to all events
 
 You can provide custom context entities to describe the media playback.
 They will be added to all events tracked in the media tracking.
@@ -450,26 +451,24 @@ Updates stored attributes of the media player such as the current playback.
 Use this function to continually update the player attributes so that they can be sent in the background ping events.
 We recommend updating the playback position every 1 second.
 
-
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('updateMediaPlayer', {
+{`window.snowplow('updateMediaTracking', {
     id,
-    media: { currentTime: 10 }
+    player: { currentTime: 10 }
 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`import { updateMediaPlayer } from "@snowplow/browser-plugin-media";
-updateMediaPlayer({
+{`import { updateMediaTracking } from "@snowplow/browser-plugin-media";
+updateMediaTracking({
     id,
-    media: { currentTime: 10 }
+    player: { currentTime: 10 }
 });
 `}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.update(media: MediaUpdate().currentTime(10.0))
-`}
+{`mediaTracking.update(player: MediaPlayer().currentTime(10.0))`}
 </CodeBlock>)}</>
 
 ## Tracking media events
@@ -494,24 +493,22 @@ You can update properties for the media player entity as events are tracked.
 The updated properties will apply for the current and all following events.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackMediaVolumeChange', {
+{`window.snowplow('trackMediaSeekEnd', {
     id,
-    media: { volume: 33 }
+    player: { currentTime: 30.0 }
 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`import { trackMediaVolumeChange } from "@snowplow/browser-plugin-media";
-trackMediaVolumeChange({
+{`import { trackMediaSeekEnd } from "@snowplow/browser-plugin-media";
+trackMediaSeekEnd({
     id,
-    media: { volume: 33 }
-});
-`}
+    media: { currentTime: 30.0 }
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.volumeChange, media: MediaUpdate().volume(33))
-`}
+{`mediaTracking.track(MediaSeekEndEvent(), media: MediaPlayer().currentTime(30.0)`}
 </CodeBlock>)}</>
 
 #### Update ad and ad break properties
@@ -549,14 +546,12 @@ trackMediaAdStart({
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`let ad = MediaAdUpdate()
+{`let ad = MediaAd(adId: "1234") // Unique identifier for the ad
     .name("Podcast Ad") // Friendly name of the ad
-    .adId("1234") // Unique identifier for the ad
     .creativeId("4321") // The ID of the ad creative
-    .duration("15") // Length of the video ad in seconds
+    .duration(15) // Length of the video ad in seconds
     .skippable(true) // Indicating whether skip controls are made available to the end user
-mediaTracking.track(.adStart, ad: ad)
-`}
+mediaTracking.track(MediaAdStartEvent(), ad: ad)`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
@@ -584,15 +579,13 @@ trackMediaAdBreakStart({
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`let adBreak = MediaAdBreakUpdate()
+{`let adBreak = MediaAdBreak(breakId: "2345") // An identifier for the ad break
     .name("pre-roll") // Ad break name
-    .breakId("2345") // An identifier for the ad break
     .breakType(.linear) // Type of ads within the break
-mediaTracking.track(.adBreakStart, adBreak: adBreak)
-`}
+mediaTracking.track(MediaAdBreakStartEvent(), adBreak: adBreak)`}
 </CodeBlock>)}</>
 
-#### Add context entities
+#### Add context entities to tracked event
 
 You can add custom context entities to tracked events.
 This will only apply to the currently tracked event.
@@ -624,15 +617,14 @@ trackMediaPlay({
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(event: MediaEvent(.play, entities: [
+{`mediaTracking.track(MediaPlayEvent().entities([
     SelfDescribingJson(
         schema: "iglu:org.schema/video/jsonschema/1-0-0",
         andData: [
             "creativeId": "1234"
         ]
     )
-]))
-`}
+]))`}
 
 </CodeBlock>)}</>
 
@@ -649,16 +641,15 @@ Tracks a media player ready event that is fired when the media tracking is succe
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackMediaReady({ id });
-`}
+{`trackMediaReady({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.ready)`}
+{`mediaTracking.track(MediaReadyEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ready/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ready_event/jsonschema/1-0-0`.
 
 ##### Play
 
@@ -671,16 +662,15 @@ Tracking this event will automatically set the `paused` property in the media pl
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackMediaPlay({ id });
-`}
+{`trackMediaPlay({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.play)`}
+{`mediaTracking.track(MediaPlayEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_play/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/play_event/jsonschema/1-0-0`.
 
 ##### Pause
 
@@ -693,16 +683,15 @@ Tracking this event will automatically set the `paused` property in the media pl
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackMediaPause({ id });
-`}
+{`trackMediaPause({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.pause)`}
+{`mediaTracking.track(MediaPauseEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_pause/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/pause_event/jsonschema/1-0-0`.
 
 ##### End
 
@@ -715,476 +704,551 @@ Tracking this event will automatically set the `ended` and `paused` properties i
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackMediaEnd({ id });
-`}
+{`trackMediaEnd({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.end)`}
+{`mediaTracking.track(MediaEndEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_end/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/end_event/jsonschema/1-0-0`.
 
-##### SeekStart
+##### Seek start
 
 Tracks a media player seek start event sent when a seek operation begins.
 
 If multiple seek start events are tracked after each other (without a seek end event), the tracker tracks only the first one.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackSeekStart', { id });`}
+{`window.snowplow('trackMediaSeekStart', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackSeekStart({ id });
-`}
+{`trackMediaSeekStart({ id });`}
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.seekStart)`}
+{`mediaTracking.track(MediaSeekStartEvent())`}
 </CodeBlock>)}</>
 
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_seek_start/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/seek_start_event/jsonschema/1-0-0`.
 
-##### SeekEnd
+##### Seek end
 
 Tracks a media player seek end event sent when a seek operation completes.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackSeekEnd', { id });`}
+{`window.snowplow('trackMediaSeekEnd', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackSeekEnd({ id });
-`}
+{`trackMediaSeekEnd({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.seekEnd)`}
+{`mediaTracking.track(MediaSeekEndEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_seek_end/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/seek_end_event/jsonschema/1-0-0`.
 
 #### Events for changes in playback settings
 
-##### PlaybackRateChange
+##### Playback rate change
 
 Tracks a media player playback rate change event sent when the playback rate has changed.
 
+The event schema has two properties:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| previousRate | N | number | Playback rate before the change (1 is normal) |
+| newRate | Y | number | Playback rate after the change (1 is normal) |
+
+The `previousRate` is set automatically based on the last `playbackRate` value in the `player` entity.
+The `newRate` is passed when tracking the event and is automatically updated in the `player` entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackPlaybackRateChange', { id });`}
+{`window.snowplow('trackMediaPlaybackRateChange', { id, newRate: 1.5 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackPlaybackRateChange({ id });
-`}
+{`trackMediaPlaybackRateChange({ id, newRate: 1.5 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.playbackRateChange)`}
+{`mediaTracking.track(MediaPlaybackRateChangeEvent(newRate: 1.5))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_playback_rate_change/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/playback_rate_change_event/jsonschema/1-0-0`.
 
-##### VolumeChange
+##### Volume change
 
 Tracks a media player volume change event sent when the volume has changed.
 
+The event schema has two properties:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| previousVolume | N | integer | Volume percentage before the change |
+| newVolume | Y | integer | Volume percentage after the change |
+
+The `previousVolume` is set automatically based on the last `volume` value in the `player` entity.
+The `newVolume` is passed when tracking the event and is automatically updated in the `player` entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackVolumeChange', { id });`}
+{`window.snowplow('trackMediaVolumeChange', { id, newVolume: 80 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackVolumeChange({ id });
-`}
+{`trackMediaVolumeChange({ id, newVolume: 80 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.volumeChange)`}
+{`mediaTracking.track(MediaVolumeChangeEvent(newVolume: 80))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_volume_change/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/volume_change_event/jsonschema/1-0-0`.
 
-##### FullscreenChange
+##### Fullscreen change
 
 Tracks a media player fullscreen change event fired immediately after the browser switches into or out of full-screen mode.
 
+The event schema has one property:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| fullscreen | Y | boolean | Whether the video element is fullscreen |
+
+The `fullscreen` value is passed when tracking the event and is automatically updated in the `player` entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackFullscreenChange', { id });`}
+{`window.snowplow('trackMediaFullscreenChange', { id, fullscreen: true });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackFullscreenChange({ id });
-`}
+{`trackMediaFullscreenChange({ id, fullscreen: true });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.fullscreenChange)`}
+{`mediaTracking.track(MediaFullscreenChangeEvent(fullscreen: true))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_fullscreen_change/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/fullscreen_change_event/jsonschema/1-0-0`.
 
-##### PictureInPictureChange
+##### Picture-in-picture change
 
 Tracks a media player picture-in-picture change event fired immediately after the browser switches into or out of picture-in-picture mode.
 
+The event schema has one property:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| pictureInPicture | Y | boolean | Whether the video element is showing picture-in-picture |
+
+The `pictureInPicture` value is passed when tracking the event and is automatically updated in the `player` entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackPictureInPictureChange', { id });`}
+{`window.snowplow('trackMediaPictureInPictureChange', { id, pictureInPicture: true });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackPictureInPictureChange({ id });
-`}
+{`trackMediaPictureInPictureChange({ id, pictureInPicture: true });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.pictureInPictureChange)`}
+{`mediaTracking.track(MediaPictureInPictureChangeEvent(pictureInPicture: true))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_picture_in_picture_change/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/picture_in_picture_change_event/jsonschema/1-0-0`.
 
 #### Events for ad events
 
-##### AdBreakStart
+##### Ad-break start
 
 Tracks a media player ad break start event that signals the start of an ad break.
 
+Tracking this event will increase the counter of `adBreaks` in the session entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdBreakStart', { id });`}
+{`window.snowplow('trackMediaAdBreakStart', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdBreakStart({ id });
-`}
+{`trackMediaAdBreakStart({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adBreakStart)`}
+{`mediaTracking.track(MediaAdBreakStartEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_break_start/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_break_start_event/jsonschema/1-0-0`.
 
-##### AdBreakEnd
+##### Ad-break end
 
 Tracks a media player ad break end event that signals the end of an ad break.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdBreakEnd', { id });`}
+{`window.snowplow('trackMediaAdBreakEnd', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdBreakEnd({ id });
-`}
+{`trackMediaAdBreakEnd({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adBreakEnd)`}
+{`mediaTracking.track(MediaAdBreakEndEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_break_end/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_break_end_event/jsonschema/1-0-0`.
 
-##### AdStart
+##### Ad start
 
 Tracks a media player ad start event that signals the start of an ad.
 
 Tracking this event will increase the counter of `ads` in the session entity.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdStart', { id });`}
+{`window.snowplow('trackMediaAdStart', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdStart({ id });
-`}
+{`trackMediaAdStart({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adStart)`}
+{`mediaTracking.track(MediaAdStartEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_start/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_start_event/jsonschema/1-0-0`.
 
-##### AdSkip
+##### Ad skip
 
 Tracks a media player ad skip event fired when the user activated a skip control to skip the ad creative.
+
+The event schema has one optional property:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | N | integer | The percent of the way through the ad |
 
 Tracking this event will increase the counter of `adsSkipped` in the session entity.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdSkip', { id });`}
+{`window.snowplow('trackMediaAdSkip', { id, percentProgress: 60 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdSkip({ id });
-`}
+{`trackMediaAdSkip({ id, percentProgress: 60 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adSkip)`}
+{`mediaTracking.track(MediaAdSkipEvent(percentProgress: 60))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_skip/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_skip_event/jsonschema/1-0-0`.
 
-##### AdFirstQuartile
+##### Ad first quartile
 
 Tracks a media player ad first quartile played event fired when a quartile of ad is reached after continuous ad playback at normal speed.
 
-The tracker will automatically set the `percentProgress` property of the ad entity to 25% when this event is tracked.
+The event schema has one required property – it is set automatically to 25%:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | Y | integer | The percent of the way through the ad |
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdFirstQuartile', { id });`}
+{`window.snowplow('trackMediaAdFirstQuartile', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdFirstQuartile({ id });
-`}
+{`trackMediaAdFirstQuartile({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adFirstQuartile)`}
+{`mediaTracking.track(MediaAdFirstQuartileEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_quartile/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_quartile_event/jsonschema/1-0-0`.
 
-##### AdMidpoint
+##### Ad midpoint
 
 Tracks a media player ad midpoint played event fired when a midpoint of ad is reached after continuous ad playback at normal speed.
 
-The tracker will automatically set the `percentProgress` property of the ad entity to 50% when this event is tracked.
+The event schema has one required property – it is set automatically to 50%:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | Y | integer | The percent of the way through the ad |
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdMidpoint', { id });`}
+{`window.snowplow('trackMediaAdMidpoint', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdMidpoint({ id });
-`}
+{`trackMediaAdMidpoint({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adMidpoint)`}
+{`mediaTracking.track(MediaAdMidpointEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_quartile/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_quartile_event/jsonschema/1-0-0`.
 
-##### AdThirdQuartile
+##### Ad third quartile
 
 Tracks media player ad third quartile played event fired when a quartile of ad is reached after continuous ad playback at normal speed.
 
-The tracker will automatically set the `percentProgress` property of the ad entity to 75% when this event is tracked.
+The event schema has one required property – it is set automatically to 75%:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | Y | integer | The percent of the way through the ad |
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdThirdQuartile', { id });`}
+{`window.snowplow('trackMediaAdThirdQuartile', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdThirdQuartile({ id });
+{`trackMediaAdThirdQuartile({ id });
 `}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adThirdQuartile)`}
+{`mediaTracking.track(MediaAdThirdQuartileEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_quartile/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_quartile/jsonschema/1-0-0`.
 
-##### AdComplete
+##### Ad complete
 
 Tracks a media player ad complete event that signals the ad creative was played to the end at normal speed.
 
-The tracker will automatically set the `percentProgress` property of the ad entity to 100% when this event is tracked.
-
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdComplete', { id });`}
+{`window.snowplow('trackMediaAdComplete', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdComplete({ id });
-`}
+{`trackMediaAdComplete({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adComplete)`}
+{`mediaTracking.track(MediaAdCompleteEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_quartile/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_complete/jsonschema/1-0-0`.
 
-##### AdClick
+##### Ad click
 
 Tracks a media player ad click event fired when the user clicked on the ad.
+
+The event schema has one optional property:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | N | integer | The percent of the way through the ad |
 
 Tracking this event will increase the counter of `adsClicked` in the session entity.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdClick', { id });`}
+{`window.snowplow('trackMediaAdClick', { id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdClick({ id });
-`}
+{`trackMediaAdClick({ id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adClick)`}
+{`mediaTracking.track(MediaAdClickEvent(percentProgress: 30))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_click/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_click_event/jsonschema/1-0-0`.
 
-##### AdPause
+##### Ad pause
 
 Tracks a media player ad pause event fired when the user clicked the pause control and stopped the ad creative.
 
+The event schema has one optional property:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| percentProgress | N | integer | The percent of the way through the ad |
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdPause', { id });`}
+{`window.snowplow('trackMediaAdPause', { id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdPause({ id });
-`}
+{`trackMediaAdPause({ id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adPause)`}
+{`mediaTracking.track(MediaAdPauseEvent(percentProgress: 30))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_pause/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_pause_event/jsonschema/1-0-0`.
 
-##### AdResume
+##### Ad resume
 
 Tracks a media player ad resume event fired when the user resumed playing the ad creative after it had been stopped or paused.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackAdResume', { id });`}
+{`window.snowplow('trackMediaAdResume', { id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackAdResume({ id });
-`}
+{`trackMediaAdResume({ id, percentProgress: 30 });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.adResume)`}
+{`mediaTracking.track(MediaAdResumeEvent(percentProgress: 30))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_ad_resume/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/ad_resume_event/jsonschema/1-0-0`.
 
 #### Events for data quality
 
-##### BufferStart
+##### Buffer start
 
 Tracks a media player buffering start event fired when the player goes into the buffering state and begins to buffer content.
 
+The tracker will calculate the time since this event until either the buffer end event or play event or a change in playback position and add the duration to the `timeBuffering` property in the session entity.
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackBufferStart', { id });`}
+{`window.snowplow('trackMediaBufferStart', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackBufferStart({ id });
-`}
+{`trackMediaBufferStart({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.bufferStart)`}
+{`mediaTracking.track(MediaBufferStartEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_buffer_start/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/buffer_start_event/jsonschema/1-0-0`.
 
-##### BufferEnd
+##### Buffer end
 
 Tracks a media player buffering end event fired when the the player finishes buffering content and resumes playback.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackBufferEnd', { id });`}
+{`window.snowplow('trackMediaBufferEnd', { id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackBufferEnd({ id });
-`}
+{`trackMediaBufferEnd({ id });`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.bufferEnd)`}
+{`mediaTracking.track(MediaBufferEndEvent())`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_buffer_end/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/buffer_end_event/jsonschema/1-0-0`.
 
-##### QualityChange
+##### Quality change
 
-Tracks a media player quality change event tracked when the video playback quality changes automatically.
+Tracks a media player quality change event tracked when the video playback quality changes.
+
+The event schema has the following properties:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| previousQuality | N | string | Quality level before the change (e.g., 1080p) |
+| newQuality | N | string | Quality level after the change (e.g., 1080p) |
+| bitrate | N | integer | The current bitrate in bits per second |
+| framesPerSecond | N | integer | The current number of frames per second |
+| automatic | N | boolean | Whether the change was automatic or triggered by the user |
+
+The `previousQuality` is set automatically based on the last `quality` value in the `player` entity.
+The `newQuality` is passed when tracking the event and is automatically updated in the `player` entity.
 
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackQualityChange', { id });`}
+{`window.snowplow('trackMediaQualityChange', {
+    id,
+    newQuality: '1080p',
+    bitrate: 1000,
+    framesPerSecond: 30,
+    automatic: false,
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackQualityChange({ id });
-`}
+{`trackMediaQualityChange({
+    id,
+    newQuality: '1080p',
+    bitrate: 1000,
+    framesPerSecond: 30,
+    automatic: false,
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.qualityChange)`}
+{`mediaTracking.track(MediaQualityChangeEvent(
+    newQuality: "1080p",
+    bitrate: 1000,
+    framesPerSecond: 30,
+    automatic: false,
+))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_quality_change/jsonschema/1-0-0`.
-
-##### UserUpdateQuality
-
-Tracks a media player user update quality event tracked when the video playback quality changes as a result of user interaction (choosing a different quality setting).
-
-<>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackUserUpdateQuality', { id });`}
-</CodeBlock>)}</>
-
-<>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackUserUpdateQuality({ id });
-`}
-</CodeBlock>)}</>
-
-<>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.userUpdateQuality)`}
-</CodeBlock>)}</>
-
-*Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_user_update_quality/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/quality_change_event/jsonschema/1-0-0`.
 
 ##### Error
 
 Tracks a media player error event tracked when the resource could not be loaded due to an error.
 
+The event schema has the following properties:
+
+| Request Key | Required | Type/Format | Description |
+| --- | --- | --- | --- |
+| errorCode | N | string | Error-identifying code for the playback issue. E.g. E522 |
+| errorDescription | N | string | Longer description for the error occurred in the playback |
+
 <>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
-{`window.snowplow('trackError', { id });`}
+{`window.snowplow('trackMediaError', {
+    id,
+    errorCode: '500',
+    errorDescription: 'Failed to load media',
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
-{`trackError({ id });
-`}
+{`trackMediaError({
+    id,
+    errorCode: '500',
+    errorDescription: 'Failed to load media',
+});`}
 </CodeBlock>)}</>
 
 <>{(props.tracker == 'ios') && (<CodeBlock language="swift">
-{`mediaTracking.track(.error)`}
+{`mediaTracking.track(MediaErrorEvent(
+    errorCode: "500",
+    errorDescription: "Failed to load media",
+))`}
 </CodeBlock>)}</>
 
 *Schema:*
-`iglu:com.snowplowanalytics.snowplow/media_player_event_error/jsonschema/1-0-0`.
+`iglu:com.snowplowanalytics.snowplow.media/error_event/jsonschema/1-0-0`.
