@@ -1252,3 +1252,35 @@ The event schema has the following properties:
 
 *Schema:*
 `iglu:com.snowplowanalytics.snowplow.media/error_event/jsonschema/1-0-0`.
+
+### Custom self-describing events
+
+You may also define your custom event schemas to address your specific needs not covered by the events above.
+When tracked within the context of a media tracking, the tracker will attach the player, session, ad, and ad break entities to these events.
+
+<>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
+{`window.snowplow('trackMediaSelfDescribingEvent', {
+    id,
+    event: {
+        schema: 'iglu:com.acme/event/jsonschema/1-0-0',
+        data: { foo: 'bar' },
+    },
+});`}
+</CodeBlock>)}</>
+
+<>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
+{`trackMediaSelfDescribingEvent({
+    id,
+    event: {
+        schema: 'iglu:com.acme/event/jsonschema/1-0-0',
+        data: { foo: 'bar' },
+    },
+});`}
+</CodeBlock>)}</>
+
+<>{(props.tracker == 'ios') && (<CodeBlock language="swift">
+{`mediaTracking.track(SelfDescribing(
+    schema: "iglu:com.acme/event/jsonschema/1-0-0",
+    payload: ["foo": "bar"]
+))`}
+</CodeBlock>)}</>
