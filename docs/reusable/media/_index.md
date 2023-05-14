@@ -261,9 +261,9 @@ let mediaTracking = tracker.media.startMediaTracking(id: id, player: player)
 `}
 </CodeBlock>)}</>
 
-#### Ping events
+#### Media ping events
 
-Media ping events (not to be confused with page ping events) are events sent in a regular interval while media tracking is active.
+Media ping events (not to be confused with page ping events, see below) are events sent in a regular interval while media tracking is active.
 They inform about the current state of the media playback.
 
 By default, ping events are sent every 30 seconds.
@@ -337,6 +337,30 @@ let mediaTracking = tracker.media.startMediaTracking(configuration: configuratio
 
 Media ping events have the following schema:
 `iglu:com.snowplowanalytics.snowplow.media/ping_event/jsonschema/1-0-0`.
+
+<>{(props.tracker == 'js-browser' || props.tracker == 'js-tag') && (<>
+<h4>Page ping events</h4>
+<p>
+Page ping events are tracked when activity tracking is enabled in the tracker as long as the user engages with the page (clicks, moves the cursor, scrolls, ...).
+In contrast with the media ping events, page ping events don't contain any information about the media playback (e.g., the player or session entity).
+</p>
+<p>
+However, when the user watches a video on the page, they might not be interacting with it, causing page ping events not to be tracked.
+The media tracking plugin addresses this problem and automatically keeps the page pings alive while the video is being played.
+On the background, it calls the <code>updatePageActivity</code> function in activity tracking every time the media tracking is updated or a media event is tracked.
+</p>
+<p>
+The behaviour is enabled by default.
+In case you don't want the page activity to be automatically updated when the video is playing, you can disable it as follows:
+</p>
+<>{(props.tracker == 'js-tag') && (<CodeBlock language="javascript">
+{`window.snowplow('startMediaTracking', { id, updatePageActivityWhilePlaying: false });`}
+</CodeBlock>)}</>
+<>{(props.tracker == 'js-browser') && (<CodeBlock language="javascript">
+{`startMediaTracking({ id, updatePageActivityWhilePlaying: false });
+`}
+</CodeBlock>)}</>
+</>)}</>
 
 #### Media player session
 
